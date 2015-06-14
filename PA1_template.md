@@ -72,7 +72,7 @@ dataByDate <- cbind(dataByDateWith0[, 1:3], dataByDateNo0[, 2],
                     dataByDateWith0[, 4], dataByDateNo0[, 3])
 ```
 
-View() is a nice function to view daily statistics of steps, but it doesn't work in R Markdown, so I will use kable() function from the knitr package instead. This produces a table when "knit HTML" is run:
+View() is a nice function to view daily statistics of steps, but it doesn't work in R Markdown, so I will use kable() function from the knitr package instead. This produces a table "knit HTML" is run:
 
 
 ```r
@@ -249,6 +249,16 @@ sum(!complete.cases(newData))
 ## [1] 0
 ```
 
+Plot a histogram of total number of steps taken daily (after taking care of the missing values):
+
+
+```r
+newDataByDate <- summarise(group_by(newData, date), sum(steps))
+colnames(newDataByDate) <- c("date", "sum")
+hist(newDataByDate$sum, xlab = "Count", main = "Total Steps, Oct - Nov 2012, Daily")
+```
+
+![plot of chunk unnamed-chunk-15](figure/unnamed-chunk-15-1.png) 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
@@ -300,7 +310,7 @@ print(p1, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
 print(p2, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
 ```
 
-![plot of chunk unnamed-chunk-18](figure/unnamed-chunk-18-1.png) 
+![plot of chunk unnamed-chunk-19](figure/unnamed-chunk-19-1.png) 
 
 Now isn't that interesting. If you only look at the scale it appears that this person walks more on weekdays, but if you follow the 100 level, there is a clear break through to 200 for a few intervals, but then it almost never reaches this level. On the contrary, weekend intervals never reach 200, but they breach the 100 steps level quite a few times, and there is more variability.
 

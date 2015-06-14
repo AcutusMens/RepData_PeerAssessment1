@@ -143,6 +143,13 @@ Doing a quick check for any missing values reveals that they are all taken care 
 sum(!complete.cases(newData))
 ```
 
+Plot a histogram of total number of steps taken daily (after taking care of the missing values):
+
+```{r}
+newDataByDate <- summarise(group_by(newData, date), sum(steps))
+colnames(newDataByDate) <- c("date", "sum")
+hist(newDataByDate$sum, xlab = "Count", main = "Total Steps, Oct - Nov 2012, Daily")
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
