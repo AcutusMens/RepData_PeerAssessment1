@@ -72,7 +72,7 @@ dataByDate <- cbind(dataByDateWith0[, 1:3], dataByDateNo0[, 2],
                     dataByDateWith0[, 4], dataByDateNo0[, 3])
 ```
 
-View() is a nice function to view daily statistics of steps, but it doesn't work in R Markdown, so I will use kable() function from the knitr package instead. This produces a table "knit HTML" is run:
+View() is a nice function to view daily statistics of steps, but it doesn't work in R Markdown, so I will use kable() function from the knitr package instead. This produces a table when "knit HTML" is run:
 
 
 ```r
