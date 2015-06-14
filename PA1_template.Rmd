@@ -191,3 +191,4 @@ print(p2, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
 ```
 
 Now isn't that interesting. If you only look at the scale it appears that this person walks more on weekdays, but if you follow the 100 level, there is a clear break through to 200 for a few intervals, but then it almost never reaches this level. On the contrary, weekend intervals never reach 200, but they breach the 100 steps level quite a few times, and there is more variability.
+
