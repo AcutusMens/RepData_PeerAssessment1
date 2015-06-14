@@ -1,25 +1,193 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
 output: 
-  html_document:
-    keep_md: true
+html_document:
+keep_md: true
 ---
 
 
 ## Loading and preprocessing the data
 
 
+For this analysis I will use the following libraries (packages):
+
+```{r}
+library(dplyr, warn.conflicts = FALSE)
+library(knitr)
+library(ggplot2)
+library(grid)
+```
+
+
+Read raw data file into R. I'll actually do this twice - one data frame will treat all zero values as NA values. I will calculate means / medians with zeroes and without.
+
+```{r}
+dataReader <- read.csv("./activity.csv", na.strings = c(0, "NA"))
+dataReader0 <- read.csv("./activity.csv")
+```
+
+
+Create groups of data by day and by interval and summarise to get required statistics:
+
+```{r}
+dataByDateWith0 <- summarise(group_by(dataReader0, date), sum(steps, na.rm = T),
+                             mean(steps, na.rm = T), median(steps, na.rm = T))
+dataByDateNo0 <- summarise(group_by(dataReader, date), 
+                           mean(steps, na.rm = T), median(steps, na.rm = T))
+dataByInterval <- summarise(group_by(dataReader0, interval), 
+                            mean(steps, na.rm = T))
+```
+
+
+Use descriptive names as column headers:
+
+```{r}
+colnames(dataByDateWith0) <- c("date", "sum", "mean-with-0s", "median-with-0s")
+colnames(dataByDateNo0) <- c("date", "mean-no-0s", "median-no-0s")
+colnames(dataByInterval) <- c("interval", "mean")
+```
+
 
 ## What is mean total number of steps taken per day?
 
+
+Plot a histogram of total number of steps taken daily:
+
+```{r}
+hist(dataByDateWith0$sum, xlab = "Count", main = "Total Steps, Oct - Nov 2012, Daily")
+```
+
+Combine data into one summary table:
+
+```{r}
+dataByDate <- cbind(dataByDateWith0[, 1:3], dataByDateNo0[, 2],
+                    dataByDateWith0[, 4], dataByDateNo0[, 3])
+```
+
+View() is a nice function to view daily statistics of steps, but it doesn't work in R Markdown, so I will use kable() function from the knitr package instead. This produces a table "knit HTML" is run:
+
+```{r kable}
+kable(dataByDate, digits = 2)
+```
 
 
 ## What is the average daily activity pattern?
 
 
+Plot a time series with mean steps on the y-axis and intervals on the x-axis:
+
+```{r}
+plot(dataByInterval$mean ~ dataByInterval$interval, type = "l", main = "Mean Steps,
+     Oct - Nov 2012, by 5 min Interval", xlab = "Interval", ylab = "Count")
+```
+
+
+See which interval has most steps:
+
+```{r}
+dataByInterval[which(dataByInterval$mean == max(dataByInterval$mean, na.rm = T)), ]
+```
+
+As you can see, interval between 835 and 840 minutes has most average steps at approximately 206.
+
 
 ## Imputing missing values
 
+Let's get a number of rows with missing values:
+
+```{r}
+sum(!complete.cases(dataReader0))
+```
+
+8 days have all NAs or zeroes as evidenced by the following piece of code. Daily mean of NA is probably because the tracking device was not on. Daily mean of NaN is probably because the user did not wear the device all day, so it was recording zero steps.
+
+```{r}
+daysMissingData <- dataByDate$date[which(!complete.cases(dataByDate))]
+daysMissingData
+```
+
+First, I am going to copy my original data set with zeroes to a new data set that I will work with to replace missing values:
+
+```{r}
+newData <- dataReader0
+```
+
+I think the proper way to replace NAs for these days is to assign value of daily mean of the next day. This is the best option as I do not think assigning zero is realistic unless this person was actually confined to a bed 8 days out of the 2 month period.
+
+What I am doing next is looping over NA days, and if my original data rows match those NA days, then I am assigning the mean steps from the following day (divided by the number of intervals, or 288), to every NA value.
+
+```{r}
+for (i in seq_along(daysMissingData)){
+    for (j in seq(nrow(newData))){
+        if (newData$date[j] == daysMissingData[i]){
+            newData$steps[j] <- dataByDate[[3]][which(dataByDate$date == daysMissingData[i]) + 1]/288
+            }
+        }
+    }
+```
+
+After running this we still have to take care of 2012-11-09 (Because 2012-11-10 was also NA), and the last day, (because there is no following day in the data set).
+
+```{r}
+for (i in 11233:11520){
+    newData$steps[i] <- newData$steps[11521]/288
+    }
+for (i in 17281:17568){
+    newData$steps[i] <- dataByDate[[3]][60]/288
+    }
+```
+
+Doing a quick check for any missing values reveals that they are all taken care of:
+
+```{r}
+sum(!complete.cases(newData))
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Create an empty vector and then loop over all rows to transform dates to days of the week:
+
+```{r}
+day = character()
+for(i in seq(nrow(newData))){
+    if(weekdays(as.Date(newData$date[i])) == "Saturday"
+       | weekdays(as.Date(newData$date[i])) == "Sunday"){
+            day[i] <- "weekend"
+        } else {
+            day[i] <- "weekday" 
+            }
+    
+    }
+```
+
+Add this vector to the dataset:
+
+```{r}
+newData <- cbind(newData, day)
+```
+
+Create 2 groups of data summarised by mean of steps for each interval, use descriptive names for 2nd column:
+
+```{r}
+newDataWeekday <- summarise(group_by(filter(newData, day == "weekday"), interval), mean(steps))
+newDataWeekend <- summarise(group_by(filter(newData, day == "weekend"), interval), mean(steps))
+colnames(newDataWeekday)[2] <- "mean"
+colnames(newDataWeekend)[2] <- "mean"
+```
+
+Create two plots to view weekday activity next to weekend activity:
+
+```{r}
+p1 <- ggplot(newDataWeekday, aes(x = interval, y = mean)) +
+    geom_line() +
+    ggtitle("Weekday")
+p2 <- ggplot(newDataWeekend, aes(x = interval, y = mean)) +
+    geom_line() +
+    ggtitle("Weekend")
+pushViewport(viewport(layout = grid.layout(2, 1)))
+print(p1, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(p2, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+```
+
+Now isn't that interesting. If you only look at the scale it appears that this person walks more on weekdays, but if you follow the 100 level, there is a clear break through to 200 for a few intervals, but then it almost never reaches this level. On the contrary, weekend intervals never reach 200, but they breach the 100 steps level quite a few times, and there is more variability.
